@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Pencatatan Keuangan - Tema Coklat Eksklusif</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js CDN -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        /* Custom scrollbar untuk kenyamanan di HP */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #b08968; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-[#FDFBF7] min-h-screen text-[#3E2723] font-sans pb-12" x-data="financeApp()">
+
+    <!-- Navbar -->
+    <nav class="bg-[#3E2723] text-[#EFEBE9] shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <h1 class="text-base sm:text-lg font-bold tracking-wide flex items-center gap-2 text-center sm:text-left">
+                <span>☕</span> Dashboard Keuangan Pribadi
+            </h1>
+            <span class="text-xs bg-[#5D4037] text-[#D7CCC8] px-3 py-1 rounded-full font-medium shadow-inner">
+                Tema: Coklat Klasik & Responsif
+            </span>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 space-y-6 sm:space-y-8">
+
+        <!-- 1. LAPORAN AKHIR & CHART PIE -->
+        <section class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-[#D7CCC8]/40">
+            <h2 class="text-base sm:text-lg font-bold text-[#4E342E] mb-4 flex items-center gap-2">
+                <span>📊</span> Laporan Akhir & Ringkasan Aktual
+            </h2>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+                <div class="bg-[#EFEBE9]/60 border border-[#D7CCC8] p-4 rounded-xl">
+                    <p class="text-[11px] text-[#6D4C41] font-semibold uppercase tracking-wider">Total Pemasukan Aktual</p>
+                    <p class="text-xl sm:text-2xl font-extrabold text-[#3E2723] mt-1" x-text="formatRupiah(totalIncomeActual)"></p>
+                </div>
+                <div class="bg-[#D7CCC8]/40 border border-[#BCAAA4] p-4 rounded-xl">
+                    <p class="text-[11px] text-[#5D4037] font-semibold uppercase tracking-wider">Total Pengeluaran Aktual</p>
+                    <p class="text-xl sm:text-2xl font-extrabold text-[#4E342E] mt-1" x-text="formatRupiah(totalExpenseActual)"></p>
+                </div>
+                <div class="bg-[#EFEBE9]/80 border border-[#D7CCC8] p-4 rounded-xl">
+                    <p class="text-[11px] text-[#6D4C41] font-semibold uppercase tracking-wider">Selisih Bersih (Tabungan)</p>
+                    <p class="text-xl sm:text-2xl font-extrabold text-[#3E2723] mt-1" x-text="formatRupiah(totalIncomeActual - totalExpenseActual)"></p>
+                </div>
+                <div class="bg-[#D7CCC8]/60 border border-[#BCAAA4] p-4 rounded-xl">
+                    <p class="text-[11px] text-[#5D4037] font-semibold uppercase tracking-wider">Total Kekayaan Aset</p>
+                    <p class="text-xl sm:text-2xl font-extrabold text-[#4E342E] mt-1" x-text="formatRupiah(totalAssets)"></p>
+                </div>
+            </div>
+
+            <!-- Charts Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
+                <div class="bg-[#FDFBF7] p-4 rounded-xl border border-[#D7CCC8]/50 flex flex-col items-center">
+                    <h3 class="text-xs sm:text-sm font-semibold text-[#5D4037] mb-3">Distribusi Pemasukan Aktual</h3>
+                    <div class="w-full max-w-[280px] h-60 relative">
+                        <canvas id="incomePieChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-[#FDFBF7] p-4 rounded-xl border border-[#D7CCC8]/50 flex flex-col items-center">
+                    <h3 class="text-xs sm:text-sm font-semibold text-[#5D4037] mb-3">Distribusi Pengeluaran Aktual</h3>
+                    <div class="w-full max-w-[280px] h-60 relative">
+                        <canvas id="expensePieChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- GRID 2 KOLOM: INPUT RENCANA & INPUT DATA ASLI -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+
+            <!-- 2. FORM & TABEL RENCANA (BUDGET) -->
+            <div class="space-y-6">
+                <section class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-[#D7CCC8]/40">
+                    <h2 class="text-sm sm:text-base font-bold text-[#6D4C41] mb-3 flex items-center gap-2">
+                        <span>📝</span> 1. Input Rencana (Budget)
+                    </h2>
+                    <form @submit.prevent="addPlan" class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-[#5D4037] mb-1">Nama Kategori Rencana</label>
+                            <input type="text" x-model="planForm.name" placeholder="Contoh: Gaji, Makan, Transport" required class="w-full border border-[#D7CCC8] rounded-lg p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#8D6E63] outline-none bg-[#FDFBF7]">
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-semibold text-[#5D4037] mb-1">Jenis</label>
+                                <select x-model="planForm.type" class="w-full border border-[#D7CCC8] rounded-lg p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#8D6E63] outline-none bg-[#FDFBF7]">
+                                    <option value="Pemasukan">Pemasukan</option>
+                                    <option value="Pengeluaran">Pengeluaran</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-[#5D4037] mb-1">Jumlah Rencana (Rp)</label>
+                                <input type="number" x-model.number="planForm.amount" placeholder="0" required class="w-full border border-[#D7CCC8] rounded-lg p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#8D6E63] outline-none bg-[#FDFBF7]">
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-[#6D4C41] hover:bg-[#5D4037] text-white font-semibold py-2.5 rounded-lg text-xs sm:text-sm shadow transition">
+                            + Tambah Rencana
+                        </button>
+                    </form>
+                </section>
+
+                <section class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-[#D7CCC8]/40">
+                    <h3 class="text-xs sm:text-sm font-bold text-[#4E342E] mb-3">Daftar Rencana Anggaran</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-[#EFEBE9] text-[#5D4037] uppercase text-[10px]">
+                                    <th class="p-2.5">Kategori</th>
+                                    <th class="p-2.5">Jenis</th>
+                                    <th class="p-2.5">Jumlah</th>
+                                    <th class="p-2.5">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-[#EFEBE9]">
+                                <template x-for="(item, index) in plans" :key="index">
+                                    <tr class="hover:bg-[#FDFBF7]">
+                                        <td class="p-2.5 font-medium" x-text="item.name"></td>
+                                        <td class="p-2.5">
+                                            <span class="px-2 py-0.5 rounded text-[10px]" :class="item.type === 'Pemasukan' ? 'bg-[#D7CCC8] text-[#3E2723]' : 'bg-[#D7CCC8]/60 text-[#4E342E]'" x-text="item.type"></span>
+                                        </td>
+                                        <td class="p-2.5 font-bold" x-text="formatRupiah(item.amount)"></td>
+                                        <td class="p-2.5">
+                                            <button @click="plans.splice(index, 1)" class="text-[#8D6E63] hover:text-[#3E2723] font-semibold">Hapus</button>
+                                        </td>
+                                    </tr>
+                                </template>
+                                <template x-if="plans.length === 0">
+                                    <tr><td colspan="4" class="p-4 text-center text-[#8D6E63] italic">Belum ada rencana.</td></tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- 3. FORM & TABEL DATA ASLI (AKTUAL) -->
+            <div class="space-y-6">
+                <section class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-[#D7CCC8]/40">
+                    <h2 class="text-sm sm:text-base font-bold text-[#4E342E] mb-3 flex items-center gap-2">
+                        <span>💵</span> 2. Input Data Asli (Aktual)
+                    </h2>
+                    <form @submit.prevent="addActual" class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-[#5D4037] mb-1">Keterangan / Sumber Transaksi</label>
+                            <input type="text" x-model="actualForm.name" placeholder="Contoh: Gaji Utama, Beli Makan Siang" required class="w-full border border-[#D7CCC8] rounded-lg p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#6D4C41] outline-none bg-[#FDFBF7]">
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-semibold text-[#5D4037] mb-1">Jenis</label>
+                                <select x-model="actualForm.type" class="w-full border border-[#D7CCC8] rounded-lg p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#6D4C41] outline-none bg-[#FDFBF7]">
+                                    <option value="Pemasukan">Pemasukan</option>
+                                    <option value="Pengeluaran">Pengeluaran</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-[#5D4037] mb-1">Jumlah Aktual (Rp)</label>
+                                <input type="number" x-model.number="actualForm.amount" placeholder="0" required class="w-full border border-[#D7CCC8] rounded-lg p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#6D4C41] outline-none bg-[#FDFBF7]">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-[#5D4037] mb-1">Tanggal Transaksi</label>
+                            <input type="date" x-model="actualForm.date" required class="w-full border border-[#D7CCC8] rounded-lg p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-[#6D4C41] outline-none bg-[#FDFBF7]">
+                        </div>
+                        <button type="submit" class="w-full bg-[#4E342E] hover:bg-[#3E2723] text-white font-semibold py-2.5 rounded-lg text-xs sm:text-sm shadow transition">
+                            + Tambah Data Asli
+                        </button>
+                    </form>
+                </section>
+
+                <section class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-[#D7CCC8]/40">
+                    <h3 class="text-xs sm:text-sm font-bold text-[#4E342E] mb-3">Daftar Data Asli (Realisasi)</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-[#EFEBE9] text-[#5D4037] uppercase text-[10px]">
+                                    <th class="p-2.5">Tanggal</th>
+                                    <th class="p-2.5">Keterangan</th>
+                                    <th class="p-2.5">Jenis</th>
+                                    <th class="p-2.5">Jumlah</th>
+                                    <th class="p-2.5">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-[#EFEBE9]">
+                                <template x-for="(item, index) in actuals" :key="index">
+                                    <tr class="hover:bg-[#FDFBF7]">
+                                        <td class="p-2.5 text-[#8D6E63]" x-text="item.date"></td>
+                                        <td class="p-2.5 font-medium" x-text="item.name"></td>
+                                        <td class="p-2.5">
+                                            <span class="px-2 py-0.5 rounded text-[10px]" :class="item.type === 'Pemasukan' ? 'bg-[#D7CCC8] text-[#3E2723]' : 'bg-[#D7CCC8]/60 text-[#4E342E]'" x-text="item.type"></span>
+                                        </td>
+                                        <td class="p-2.5 font-bold" :class="item.type === 'Pemasukan' ? 'text-[#4E342E]' : 'text-[#6D4C41]'" x-text="formatRupiah(item.amount)"></td>
+                                        <td class="p-2.5">
+                                            <button @click="deleteActual(index)" class="text-[#8D6E63] hover:text-[#3E2723] font-semibold">Hapus</button>
+                                        </td>
+                                    </tr>
+                                </template>
+                                <template x-if="actuals.length === 0">
+                                    <tr><td colspan="5" class="p-4 text-center text-[#8D6E63] italic">Belum ada data asli.</td></tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+        </div>
+
+        <!-- 4. SELISIH TOTAL RENCANA VS AKTUAL -->
+        <section class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-[#D7CCC8]/40">
+            <h2 class="text-base sm:text-lg font-bold text-[#4E342E] mb-4 flex items-center gap-2">
+                <span>⚖️</span> Perbandingan Selisih (Total Rencana vs Total Aktual)
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="p-4 rounded-xl border border-[#D7CCC8] bg-[#FDFBF7]">
+                    <p class="text-xs font-semibold text-[#6D4C41] uppercase tracking-wider">Pemasukan (Rencana vs Aktual)</p>
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-2 gap-1 sm:gap-0">
+                        <div>
+                            <span class="text-xs text-[#8D6E63]">Rencana: </span>
+                            <span class="font-bold text-[#4E342E]" x-text="formatRupiah(totalIncomePlan)"></span>
+                        </div>
+                        <div>
+                            <span class="text-xs text-[#8D6E63]">Aktual: </span>
+                            <span class="font-bold text-[#3E2723]" x-text="formatRupiah(totalIncomeActual)"></span>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-2 border-t border-[#D7CCC8]/60 text-xs sm:text-sm flex justify-between">
+                        <span class="font-medium text-[#5D4037]">Selisih:</span>
+                        <span class="font-bold text-[#4E342E]" x-text="formatRupiah(totalIncomeActual - totalIncomePlan) + ((totalIncomeActual - totalIncomePlan) >= 0 ? ' (Lebih Baik)' : ' (Kurang)')"></span>
+                    </div>
+                </div>
+
+                <div class="p-4 rounded-xl border border-[#D7CCC8] bg-[#FDFBF7]">
+                    <p class="text-xs font-semibold text-[#6D4C41] uppercase tracking-wider">Pengeluaran (Rencana vs Aktual)</p>
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-2 gap-1 sm:gap-0">
+                        <div>
+                            <span class="text-xs text-[#8D6E63]">Rencana: </span>
+                            <span class="font-bold text-[#4E342E]" x-text="formatRupiah(totalExpensePlan)"></span>
+                        </div>
+                        <div>
+                            <span class="text-xs text-[#8D6E63]">Aktual: </span>
+                            <span class="font-bold text-[#4E342E]" x-text="formatRupiah(totalExpenseActual)"></span>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-2 border-t border-[#D7CCC8]/60 text-xs sm:text-sm flex justify-between">
+                        <span class="font-medium text-[#5D4037]">Selisih:</span>
+                        <span class="font-bold text-[#4E342E]" x-text="formatRupiah(totalExpensePlan - totalExpenseActual) + ((totalExpensePlan - totalExpenseActual) >= 0 ? ' (Hemat / Surplus)' : ' (Over Budget)')"></span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. UTANG, PIUTANG, ASET, & TABUNGAN -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+            <!-- Data Utang & Piutang -->
+            <div class="space-y-6">
+                <!-- Utang -->
+                <section class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-[#D7CCC8]/40">
+                    <h2 class="text-sm sm:text-base font-bold text-[#4E342E] mb-3">🔴 Data Utang</h2>
+                    <form @submit.prevent="addDebt" class="space-y-2 mb-4">
+                        <input type="text" x-model="debtForm.name" placeholder="Pemberi Utang" required class="w-full border border-[#D7CCC8] rounded-lg p-2 text-xs outline-none bg-[#FDFBF7]">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input type="number" x-model.number="debtForm.amount" placeholder="Jumlah (Rp)" required class="w-full border border-[#D7CCC8] rounded-lg p-2 text-xs outline-none bg-[#FDFBF7]">
+                            <input type="date" x-model="debtForm.date" required class="w-full border border-[#D7CCC8] rounded-lg p-2 text-xs outline-none bg-[#FDFBF7]">
+                        </div>
+                        <button type="submit" class="w-full bg-[#5D4037] hover:bg-[#3E2723] text-white font-semibold py-1.5 rounded-lg text-xs">+ Tambah Utang</button>
+                    </form>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <tr class="bg-[#EFEBE9] text-[#5D4037]">
+                                <th class="p-2">Pemberi</th>
+                                <th class="p-2">Jumlah</th>
+                                <th class="p-2">Tempo</th>
+                                <th class="p-2">Aksi</th>
+                            </tr>
+                            <template x-for="(item, index) in debts" :key="index">
+                                <tr class="border-b border-[#EFEBE9]">
+                                    <td class="p-2" x-text="item.name"></td>
+                                    <td class="p-2 text-[#6D4C41] font-bold" x-text="formatRupiah(item.amount)"></td>
+                                    <td class="p-2" x-text="item.date"></td>
+                                    <td class="p-2"><button @click="debts.splice(index, 1)" class="text-[#8D6E63]">Hapus</button></td>
+                                </tr>
+                            </template>
+                            <template x-if="debts.length === 0">
+                                <tr><td colspan="4" class="p-3 text-center text-[#8D6E63] italic">Belum ada utang.</td></tr>
+                            </template>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Piutang -->
+                <section class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-[#D7CCC8]/40">
+                    <h2 class="text-sm sm:text-base font-bold text-[#4E342E] mb-3">🟢 Data Piutang</h2>
+                    <form @submit.prevent="addReceivable" class="space-y-2 mb-4">
+                        <input type="text" x-model="receivableForm.name" placeholder="Nama Peminjam" required class="w-full border border-[#D7CCC8] rounded-lg p-2 text-xs outline-none bg-[#FDFBF7]">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input type="number" x-model.number="receivableForm.amount" placeholder="Jumlah (Rp)" required class="w-full border border-[#D7CCC8] rounded-lg p-2 text-xs outline-none bg-[#FDFBF7]">
+                            <input type="date" x-model="receivableForm.date" required class="w-full border border-[#D7CCC8] rounded-lg p-2 text-xs outline-none bg-[#FDFBF7]">
+                        </div>
+                        <button type="submit" class="w-full bg-[#6D4C41] hover:bg-[#5D4037] text-white font-semibold py-1.5 rounded-lg text-xs">+ Tambah Piutang</button>
+                    </form>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <tr class="bg-[#EFEBE9] text-[#5D4037]">
+                                <th class="p-2">Peminjam</th>
+                                <th class="p-2">Jumlah</th>
+                                <th class="p-2">Tempo</th>
+                                <th class="p-2">Aksi</th>
+                            </tr>
+                            <template x-for="(item, index) in receivables" :key="index">
+                                <tr class="border-b border-[#EFEBE9]">
+                                    <td class="p-2" x-text="item.name"></td>
+                                    <td class="p-2 text-[#4E342E] font-bold" x-text="formatRupiah(item.amount)"></td>
+                                    <td class="p-2" x-text="item.date"></td>
+                                    <td class="p-2"><button @click="receivables.splice(index, 1)" class="text-[#8D6E63]">Hapus</button></td>
+                                </tr>
+                            </template>
+                            <template x-if="receivables.length === 0">
+                                <tr><td colspan="4" class="p-3 text-center text-[#8D6E63] italic">Belum ada piutang.</td></tr>
+                            </template>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Data Aset & Tabungan -->
+            <div class="space-y-6">
+                <!-- Aset -->
+                <section class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-[#D7CCC8]/40">
+                    <h2 class="text-sm sm:text-base font-bold text-[#4E342E] mb-3">💎 Data Aset</h2>
+                    <form @submit.prevent="addAsset" class="space-y-2 mb-4">
+                        <input type="text" x-model="assetForm.name" placeholder="Nama Aset" required class="w-full border border-[#D7CCC8] rounded-lg p-2 text-xs outline-none bg-[#FDFBF7]">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input type="text" x-model="assetForm.subType" placeholder="Jenis (Kas / Investasi)" required class="w-full border border-[#D7CCC8] rounded-lg p-2 text-xs outline-none bg-[#FDFBF7]">
+                            <input type="number" x-model.number="assetForm.amount" placeholder="Estimasi Nilai (Rp)" required class="w-full border border-[#D7CCC8] rounded-lg p-2 text-xs outline-none bg-[#FDFBF7]">
+                        </div>
+                        <button type="submit" class="w-full bg-[#4E342E] hover:bg-[#3E2723] text-white font-semibold py-1.5 rounded-lg text-xs">+ Tambah Aset</button>
+                    </form>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <tr class="bg-[#EFEBE9] text-[#5D4037]">
+                                <th class="p-2">Aset</th>
+                                <th class="p-2">Jenis</th>
+                                <th class="p-2">Nilai</th>
+                                <th class="p-2">Aksi</th>
+                            </tr>
+                            <template x-for="(item, index) in assets" :key="index">
+                                <tr class="border-b border-[#EFEBE9]">
+                                    <td class="p-2" x-text="item.name"></td>
+                                    <td class="p-2" x-text="item.subType"></td>
+                                    <td class="p-2 text-[#3E2723] font-bold" x-text="formatRupiah(item.amount)"></td>
+                                    <td class="p-2"><button @click="assets.splice(index, 1)" class="text-[#8D6E63]">Hapus</button></td>
+                                </tr>
+                            </template>
+                            <template x-if="assets.length === 0">
+                                <tr><td colspan="4" class="p-3 text-center text-[#8D6E63] italic">Belum ada aset.</td></tr>
+                            </template>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Transaksi Tabungan -->
+                <section class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-[#D7CCC8]/40">
+                    <h2 class="text-sm sm:text-base font-bold text-[#4E342E] mb-3">🏦 Aliran Tabungan (Setor / Tarik)</h2>
+                    <form @submit.prevent="addSavings" class="space-y-2 mb-4">
+                        <input type="text" x-model="savingsForm.name" placeholder="Keterangan Transaksi" required class="w-full border border-[#D7CCC8] rounded-lg p-2 text-xs outline-none bg-[#FDFBF7]">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <select x-model="savingsForm.subType" class="w-full border border-[#D7CCC8] rounded-lg p-2 text-xs outline-none bg-[#FDFBF7]">
+                                <option value="Setor">Setor</option>
+                                <option value="Tarik">Tarik</option>
+                            </select>
+                            <input type="number" x-model.number="savingsForm.amount" placeholder="Jumlah (Rp)" required class="w-full border border-[#D7CCC8] rounded-lg p-2 text-xs outline-none bg-[#FDFBF7]">
+                        </div>
+                        <button type="submit" class="w-full bg-[#5D4037] hover:bg-[#3E2723] text-white font-semibold py-1.5 rounded-lg text-xs">+ Tambah Aliran Tabungan</button>
+                    </form>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <tr class="bg-[#EFEBE9] text-[#5D4037]">
+                                <th class="p-2">Keterangan</th>
+                                <th class="p-2">Tipe</th>
+                                <th class="p-2">Jumlah</th>
+                                <th class="p-2">Aksi</th>
+                            </tr>
+                            <template x-for="(item, index) in savings" :key="index">
+                                <tr class="border-b border-[#EFEBE9]">
+                                    <td class="p-2" x-text="item.name"></td>
+                                    <td class="p-2">
+                                        <span class="px-1.5 py-0.5 rounded text-[10px]" :class="item.subType === 'Setor' ? 'bg-[#D7CCC8] text-[#3E2723]' : 'bg-[#D7CCC8]/60 text-[#5D4037]'" x-text="item.subType"></span>
+                                    </td>
+                                    <td class="p-2 font-bold" :class="item.subType === 'Setor' ? 'text-[#4E342E]' : 'text-[#6D4C41]'" x-text="formatRupiah(item.amount)"></td>
+                                    <td class="p-2"><button @click="savings.splice(index, 1)" class="text-[#8D6E63]">Hapus</button></td>
+                                </tr>
+                            </template>
+                            <template x-if="savings.length === 0">
+                                <tr><td colspan="4" class="p-3 text-center text-[#8D6E63] italic">Belum ada transaksi tabungan.</td></tr>
+                            </template>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Script Logika & Chart.js -->
+    <script>
+        let incomeChart = null;
+        let expenseChart = null;
+
+        function financeApp() {
+            return {
+                planForm: { name: '', type: 'Pemasukan', amount: '' },
+                actualForm: { name: '', type: 'Pemasukan', amount: '', date: '' },
+                debtForm: { name: '', amount: '', date: '' },
+                receivableForm: { name: '', amount: '', date: '' },
+                assetForm: { name: '', subType: '', amount: '' },
+                savingsForm: { name: '', subType: 'Setor', amount: '' },
+
+                plans: [],
+                actuals: [],
+                debts: [],
+                receivables: [],
+                assets: [],
+                savings: [],
+
+                addPlan() {
+                    this.plans.push({ ...this.planForm, amount: Number(this.planForm.amount) });
+                    this.planForm.name = '';
+                    this.planForm.amount = '';
+                },
+
+                addActual() {
+                    this.actuals.push({ ...this.actualForm, amount: Number(this.actualForm.amount) });
+                    this.actualForm.name = '';
+                    this.actualForm.amount = '';
+                    this.actualForm.date = '';
+                    this.$nextTick(() => updateCharts(this.actuals));
+                },
+
+                deleteActual(index) {
+                    this.actuals.splice(index, 1);
+                    this.$nextTick(() => updateCharts(this.actuals));
+                },
+
+                addDebt() {
+                    this.debts.push({ ...this.debtForm, amount: Number(this.debtForm.amount) });
+                    this.debtForm.name = ''; this.debtForm.amount = ''; this.debtForm.date = '';
+                },
+
+                addReceivable() {
+                    this.receivables.push({ ...this.receivableForm, amount: Number(this.receivableForm.amount) });
+                    this.receivableForm.name = ''; this.receivableForm.amount = ''; this.receivableForm.date = '';
+                },
+
+                addAsset() {
+                    this.assets.push({ ...this.assetForm, amount: Number(this.assetForm.amount) });
+                    this.assetForm.name = ''; this.assetForm.subType = ''; this.assetForm.amount = '';
+                },
+
+                addSavings() {
+                    this.savings.push({ ...this.savingsForm, amount: Number(this.savingsForm.amount) });
+                    this.savingsForm.name = ''; this.savingsForm.amount = '';
+                },
+
+                get totalIncomePlan() {
+                    return this.plans.filter(i => i.type === 'Pemasukan').reduce((sum, i) => sum + i.amount, 0);
+                },
+
+                get totalExpensePlan() {
+                    return this.plans.filter(i => i.type === 'Pengeluaran').reduce((sum, i) => sum + i.amount, 0);
+                },
+
+                get totalIncomeActual() {
+                    return this.actuals.filter(i => i.type === 'Pemasukan').reduce((sum, i) => sum + i.amount, 0);
+                },
+
+                get totalExpenseActual() {
+                    return this.actuals.filter(i => i.type === 'Pengeluaran').reduce((sum, i) => sum + i.amount, 0);
+                },
+
+                get totalAssets() {
+                    return this.assets.reduce((sum, i) => sum + i.amount, 0);
+                },
+
+                formatRupiah(value) {
+                    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value || 0);
+                }
+            }
+        }
+
+        // Inisialisasi Chart Pie dengan Palette Coklat
+        document.addEventListener('DOMContentLoaded', () => {
+            const ctxInc = document.getElementById('incomePieChart').getContext('2d');
+            incomeChart = new Chart(ctxInc, {
+                type: 'pie',
+                data: { labels: ['Belum ada data'], datasets: [{ data: [1], backgroundColor: ['#D7CCC8'] }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            });
+
+            const ctxExp = document.getElementById('expensePieChart').getContext('2d');
+            expenseChart = new Chart(ctxExp, {
+                type: 'pie',
+                data: { labels: ['Belum ada data'], datasets: [{ data: [1], backgroundColor: ['#D7CCC8'] }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            });
+        });
+
+        function updateCharts(actuals) {
+            const incs = actuals.filter(a => a.type === 'Pemasukan');
+            const exps = actuals.filter(a => a.type === 'Pengeluaran');
+
+            // Income Pie (Coffee / Earthy Tones)
+            if (incs.length > 0) {
+                incomeChart.data.labels = incs.map(i => i.name);
+                incomeChart.data.datasets[0].data = incs.map(i => i.amount);
+                incomeChart.data.datasets[0].backgroundColor = ['#3E2723', '#4E342E', '#5D4037', '#6D4C41', '#8D6E63'];
+            } else {
+                incomeChart.data.labels = ['Belum ada data'];
+                incomeChart.data.datasets[0].data = [1];
+                incomeChart.data.datasets[0].backgroundColor = ['#D7CCC8'];
+            }
+            incomeChart.update();
+
+            // Expense Pie (Warm Earthy Tones)
+            if (exps.length > 0) {
+                expenseChart.data.labels = exps.map(e => e.name);
+                expenseChart.data.datasets[0].data = exps.map(e => e.amount);
+                expenseChart.data.datasets[0].backgroundColor = ['#5D4037', '#6D4C41', '#8D6E63', '#A1887F', '#BCAAA4'];
+            } else {
+                expenseChart.data.labels = ['Belum ada data'];
+                expenseChart.data.datasets[0].data = [1];
+                expenseChart.data.datasets[0].backgroundColor = ['#D7CCC8'];
+            }
+            expenseChart.update();
+        }
+    </script>
+</body>
+</html>
